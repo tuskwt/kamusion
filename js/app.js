@@ -103,12 +103,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Sort data
-        if (currentSort === 'alphabet') {
-            filteredData.sort((a, b) => a.word.localeCompare(b.word));
-        } else if (currentSort === 'latest') {
-            // Assuming data.js is ordered oldest to newest (top to bottom),
-            // reverse it to show latest added first.
-            filteredData.reverse();
+        // Sort data
+        if (searchQuery.length > 0) {
+            filteredData.sort((a, b) => {
+                const getScore = (item) => {
+                    const word = item.word.toLowerCase();
+                    const query = searchQuery; // Already lowercased in event listener
+
+                    if (word === query) return 4; // Exact match
+                    if (word.startsWith(query)) return 3; // Starts with
+
+                    // Specific check for verb forms if it's a verb
+                    if (item.type === 'verb') {
+                        if ((item.v1 && item.v1.toLowerCase() === query) ||
+                            (item.v2 && item.v2.toLowerCase() === query) ||
+                            (item.v3 && item.v3.toLowerCase() === query)) {
+                            return 3.5; // Exact match on verb form (high priority)
+                        }
+                    }
+
+                    if (word.includes(query)) return 2; // Contains in word
+                    return 1; // Match in other fields (translation, etc)
+                };
+
+                const scoreA = getScore(a);
+                const scoreB = getScore(b);
+
+                if (scoreA !== scoreB) {
+                    return scoreB - scoreA; // Higher score first
+                }
+
+                // Tie-breaker: Alphabetical
+                return a.word.localeCompare(b.word);
+            });
+        } else {
+            if (currentSort === 'alphabet') {
+                filteredData.sort((a, b) => a.word.localeCompare(b.word));
+            } else if (currentSort === 'latest') {
+                // Assuming data.js is ordered oldest to newest (top to bottom),
+                // reverse it to show latest added first.
+                filteredData.reverse();
+            }
         }
 
         // Show empty state if no results
